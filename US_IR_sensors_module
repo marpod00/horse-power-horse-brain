@@ -1,0 +1,101 @@
+#define TRIGGER_PIN  7  // Arduino pin tied to trigger pin on the ultrasonic sensor.
+#define ECHO_FRONT_PIN     6  // Arduino pin tied to echo pin on the ultrasonic sensor.
+#define ECHO_BACK_PIN     5  // Arduino pin tied to echo pin on the ultrasonic sensor.
+#define IR_FRONT_PIN 3 // Arduino pin tied to output pin on Infrared sensor.
+#define IR_BACK_PIN 4 // Arduino pin tied to output pin on Infrared sensor
+#define LED_PIN 13 // LED indicator of action.
+
+
+int MAX_DISTANCE = 400; // Maximum distance we want to pin for (in centimeters). Maximum sensor distance is rated at 400-500cm.
+int ACTION_DISTANCE = 100; // Distance where "Horse" takes action (in centimeters).
+int DISTANCE_FRONT = 0;
+int DISTANCE_BACK = 0;
+
+byte PERSON_FRONT = 0; //If there is a person sensed by IR sensor.
+byte PERSON_BACK = 0; //If there is a person sensed by IR sensor.
+
+unsigned long T_DELAY_US = 0;
+unsigned long T_TRIGG = 0;
+
+byte ECHO_PIN = 0;
+byte TRIGG_STATE = 0;
+
+void setup() {
+  Serial.begin (9600);
+
+  pinMode(TRIGGER_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
+
+  pinMode(ECHO_FRONT_PIN, INPUT);
+  pinMode(ECHO_BACK_PIN, INPUT);
+  pinMode(IR_FRONT_PIN, INPUT);
+  pinMode(IR_BACK_PIN, INPUT);
+
+  MAX_DISTANCE = MAX_DISTANCE * 2 * 29.1; // Turn MAX_DISTANCE from CM into "TIME".
+}
+
+void loop() {
+
+  if (millis() - T_TRIGG > T_DELAY_US) { // It triggers US sensor for 20ms. It is "listeneing" to one sensor side at the time (FRONT or BACK)
+    if (ECHO_PIN == 0) {
+      if (TRIGG_STATE == 0) {
+        UltraSonic(ECHO_FRONT_PIN); //When TRIGG you get 1 (!!), when you recive ECHO you get distance
+      }
+      else {
+        DISTANCE_FRONT = UltraSonic(ECHO_FRONT_PIN); //When TRIGG you get 1 (!!), when you recive ECHO you get distance
+      }
+    }
+    else {
+      if (TRIGG_STATE == 0) {
+        UltraSonic(ECHO_BACK_PIN); //When TRIGG you get 1 (!!), when you recive ECHO you get distance
+      }
+      else {
+        DISTANCE_BACK = UltraSonic(ECHO_BACK_PIN); //When TRIGG you get 1 (!!), when you recive ECHO you get distance
+      }
+    }
+
+    PERSON_FRONT = digitalRead(IR_FRONT_PIN);
+    PERSON_BACK = digitalRead(IR_BACK_PIN);
+
+    Serial.print("     DISTANCE_FRONT:   ");
+    Serial.print(DISTANCE_FRONT);
+    Serial.print("     DISTANCE_BACK:   ");
+    Serial.print(DISTANCE_BACK);
+    Serial.print("     PERSON:   ");
+    Serial.println(PERSON_FRONT);
+  }
+}
+
+////////////////////////////////////////////////////////////////
+
+int UltraSonic(int PIN) { //Triggering US sensor
+  int  DISTANCE = 0;
+  //  Serial.println(PIN);
+  if  (TRIGG_STATE == 0) {
+    digitalWrite(TRIGGER_PIN, HIGH);
+    T_TRIGG = millis();
+    T_DELAY_US = 10;
+    TRIGG_STATE = 1;
+  }
+
+  else if (TRIGG_STATE == 1) {
+    digitalWrite(TRIGGER_PIN, LOW);
+    T_TRIGG = millis();
+    T_DELAY_US = 0;
+    TRIGG_STATE = 0;
+
+    DISTANCE = pulseIn(PIN, HIGH, MAX_DISTANCE); //Returns the length of the pulse in microseconds (!!) or 0 if no complete pulse was received within the timeout.
+    if (DISTANCE == 0) {
+      DISTANCE  = MAX_DISTANCE;
+    }
+    if (ECHO_PIN == 0) {
+      ECHO_PIN = 1;
+    }
+    else {
+      ECHO_PIN = 0;
+    }
+    //    Serial.print("    DISTANCE:    ");
+    //    Serial.print(DISTANCE);
+    return (DISTANCE);
+  }
+}
